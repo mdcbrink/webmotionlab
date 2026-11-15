@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>WEBMOTIONLAB — Rij door onze wereld</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#080b10;--ink2:#101720;--turq:#20e0d0;--turq2:#75f5e8;--mute:#a5afba}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--ink);color:#fff;font-family:Inter,system-ui,sans-serif;touch-action:none;user-select:none}
+  canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+  .brand{position:fixed;top:20px;left:22px;font:700 16px "Space Grotesk";letter-spacing:.08em;z-index:5}
+  .brand b{color:var(--turq)}
+  .top-right{position:fixed;top:16px;right:18px;display:flex;gap:8px;z-index:5}
+  .btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:10px 16px;font:500 13px "Space Grotesk";letter-spacing:.04em;border:1px solid rgba(255,255,255,.18);background:rgba(8,11,16,.6);color:#fff;text-decoration:none;cursor:pointer;backdrop-filter:blur(10px)}
+  .btn.primary{background:var(--turq);border-color:var(--turq);color:var(--ink)}
+  .btn:hover{border-color:var(--turq)}
+  /* Doelen-lijst */
+  .goals{position:fixed;left:22px;top:60px;z-index:5;font:500 12px "Space Grotesk";letter-spacing:.06em;color:var(--mute);display:grid;gap:6px}
+  .goals span{display:flex;align-items:center;gap:8px}
+  .goals i{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--mute)}
+  .goals .done{color:#fff}.goals .done i{background:var(--turq);border-color:var(--turq);box-shadow:0 0 10px var(--turq)}
+  /* Gebied-paneel */
+  .panel{position:fixed;left:50%;bottom:24px;transform:translate(-50%,calc(100% + 220px));width:min(560px,calc(100vw - 32px));z-index:6;
+    background:rgba(16,23,32,.86);backdrop-filter:blur(14px);border:1px solid rgba(32,224,208,.35);border-radius:20px;padding:22px 24px;transition:transform .5s cubic-bezier(.2,.8,.2,1),visibility .5s;visibility:hidden}
+  .panel.open{transform:translate(-50%,0);visibility:visible}
+  .panel h2{font:700 24px "Space Grotesk";letter-spacing:-.01em;text-transform:uppercase}
+  .panel .eyebrow{font:500 11px "Space Grotesk";letter-spacing:.2em;color:var(--turq);text-transform:uppercase;margin-bottom:6px}
+  .panel p{color:#c9d1d9;line-height:1.55;font-size:14.5px;margin-top:8px}
+  .panel ul{margin-top:10px;display:grid;gap:6px;font-size:14px;color:#c9d1d9;list-style:none}
+  .panel ul li::before{content:"✓ ";color:var(--turq)}
+  .panel .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  .prices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+  .prices div{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px}
+  .prices div.f{border-color:var(--turq);background:rgba(32,224,208,.08)}
+  .prices b{display:block;font:700 22px "Space Grotesk"}
+  .prices small{color:var(--mute);font-size:11px;text-transform:uppercase;letter-spacing:.12em}
+  /* Intro */
+  .intro{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:radial-gradient(ellipse at center,rgba(8,11,16,.55),rgba(8,11,16,.92));transition:opacity .6s}
+  .intro.hide{opacity:0;pointer-events:none}
+  .intro .box{max-width:460px;text-align:center;padding:24px}
+  .intro h1{font:700 clamp(30px,6vw,48px) "Space Grotesk";line-height:1;letter-spacing:-.02em}
+  .intro h1 span{color:var(--turq)}
+  .intro p{color:var(--mute);margin:16px 0 22px;line-height:1.6}
+  .keys{display:flex;justify-content:center;gap:6px;margin-bottom:22px;flex-wrap:wrap}
+  .keys kbd{min-width:34px;padding:7px 9px;border:1px solid rgba(255,255,255,.25);border-radius:8px;font:500 12px "Space Grotesk"}
+  #loading{color:var(--turq);font:500 13px "Space Grotesk";letter-spacing:.1em;margin-bottom:14px}
+  /* Touch-joystick */
+  .joy{position:fixed;left:24px;bottom:28px;width:120px;height:120px;border-radius:50%;border:1.5px solid rgba(255,255,255,.25);background:rgba(8,11,16,.35);z-index:7;display:none}
+  .joy i{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:var(--turq);opacity:.85}
+  @media (hover:none){.joy{display:block}.keys.desk{display:none}}
+  .hint{position:fixed;right:22px;bottom:22px;z-index:5;font:500 11px "Space Grotesk";letter-spacing:.1em;color:var(--mute)}
+  @media (hover:none){.hint{display:none}.panel{bottom:170px}}
+  @media (max-width:520px){.brand{font-size:13px;top:16px;left:16px}.goals{left:16px;top:44px}.top-right{top:10px;right:10px}.top-right .btn{padding:8px 11px;font-size:11px}}
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Speelbare 3D-wereld van WEBMOTIONLAB"></canvas>
+<div class="brand">WEBMOTION<b>LAB</b></div>
+<div class="goals" id="goals"></div>
+<div class="top-right">
+  <a class="btn" href="https://webmotionlab.netlify.app/">Gewone site</a>
+  <button class="btn" id="reset" type="button">↺ Reset</button>
+</div>
+<div class="panel" id="panel" role="dialog" aria-live="polite"></div>
+<div class="joy" id="joy"><i></i></div>
+<div class="hint">WASD / PIJLTJES · SPATIE = REM · R = RESET</div>
+
+<div class="intro" id="intro">
+  <div class="box">
+    <h1>Rij door de wereld van <span>WEBMOTIONLAB</span></h1>
+    <p>Ontdek vier plekken op het eiland: onze diensten, ons werk, de prijzen en hoe je contact opneemt. Rij gerust de letters omver.</p>
+    <div class="keys desk"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd><kbd>spatie</kbd></div>
+    <div id="loading">WERELD LADEN…</div>
+    <button class="btn primary" id="start" type="button" disabled>Start met rijden →</button>
+    <p style="margin:18px 0 0;font-size:13px">Liever gewoon lezen? <a href="https://webmotionlab.netlify.app/" style="color:var(--turq2)">Bekijk de gewone website</a>.</p>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "rapier": "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.21.0/dist/rapier.mjs"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import RAPIER from 'rapier';
+
+const isTouch = matchMedia('(hover:none)').matches;
+const DPR = Math.min(devicePixelRatio, isTouch ? 1.5 : 2);
+const $ = s => document.querySelector(s);
+
+/* ------------------------------------------------------------------
+   Inhoud van de vier plekken (WEBMOTIONLAB)
+   ------------------------------------------------------------------ */
+const ZONES = [
+  { key: 'diensten', label: 'Diensten', pos: [-17, 0, -12], color: 0x20e0d0, html: `
+    <div class="eyebrow">Wat wij doen</div><h2>More than just a website</h2>
+    <ul><li>3D Web Design: interactieve 3D-ervaringen, zoals deze wereld</li><li>Business Websites: professioneel, responsive, gericht op conversie</li><li>Digital Experiences: motion design en interactie</li></ul>
+    <div class="row"><a class="btn" href="https://webmotionlab.netlify.app/#diensten">Meer over onze diensten</a></div>` },
+  { key: 'werk', label: 'Werk', pos: [17, 0, -12], color: 0x75f5e8, html: `
+    <div class="eyebrow">Portfolio · conceptontwerpen</div><h2>Built to stand out</h2>
+    <p>De drie borden laten conceptontwerpen zien: een restaurant, premium vastgoed en een creatieve studio. Geen klantprojecten.</p>
+    <div class="row"><a class="btn" href="https://webmotionlab.netlify.app/#werk">Bekijk het portfolio</a></div>` },
+  { key: 'prijzen', label: 'Prijzen', pos: [17, 0, 14], color: 0x2a7cff, html: `
+    <div class="eyebrow">Prijzen</div><h2>Premium websites. Accessible prices.</h2>
+    <div class="prices"><div><small>Starter</small><b>€500</b></div><div class="f"><small>Business</small><b>€750</b></div><div><small>Premium</small><b>€1.000</b></div></div>
+    <p>Vanafprijzen: de uiteindelijke prijs hangt af van je wensen. Je krijgt altijd eerst een offerte.</p>
+    <div class="row"><a class="btn" href="https://webmotionlab.netlify.app/#prijzen">Pakketten vergelijken</a></div>` },
+  { key: 'contact', label: 'Contact', pos: [-17, 0, 14], color: 0xffffff, html: `
+    <div class="eyebrow">Contact</div><h2>Ready to move beyond ordinary?</h2>
+    <p>Vertel ons wat je nodig hebt. Wij maken er een indrukwekkende online ervaring van.</p>
+    <div class="row"><a class="btn primary" href="https://webmotionlab.netlify.app/#contact">Start jouw website →</a></div>` },
+];
+const visited = new Set();
+function renderGoals() {
+  $('#goals').innerHTML = ZONES.map(z => `<span class="${visited.has(z.key) ? 'done' : ''}"><i></i>${z.label}</span>`).join('');
+}
+renderGoals();
+
+/* ------------------------------------------------------------------
+   Three.js: renderer, scène, licht
+   ------------------------------------------------------------------ */
+const renderer = new THREE.WebGLRenderer({ canvas: $('#c'), antialias: true });
+renderer.setPixelRatio(DPR);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070a10);
+scene.fog = new THREE.Fog(0x070a10, 45, 95);
+const camera = new THREE.PerspectiveCamera(38, 1, .1, 300);
+scene.add(new THREE.HemisphereLight(0x9fdcff, 0x0a1418, .9));
+const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+sun.castShadow = true; sun.shadow.mapSize.set(isTouch ? 1024 : 2048, isTouch ? 1024 : 2048);
+Object.assign(sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 1, far: 80 });
+sun.shadow.bias = -.0005;
+scene.add(sun, sun.target);
+
+const flat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: .85, metalness: 0, flatShading: true, ...extra });
+
+/* ------------------------------------------------------------------
+   Natuurkunde (Rapier)
+   ------------------------------------------------------------------ */
+await RAPIER.init();
+const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+const bodies = []; // [rapierBody, mesh] om te synchroniseren
+
+function fixedBox(hx, hy, hz, pos, rot = null) {
+  const b = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(...pos));
+  if (rot) b.setRotation(rot, true);
+  world.createCollider(RAPIER.ColliderDesc.cuboid(hx, hy, hz).setFriction(1), b);
+  return b;
+}
+function dynamicBox(hx, hy, hz, pos, mesh, density = .3) {
+  const b = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(...pos).setLinearDamping(.4).setAngularDamping(.5).setCanSleep(true));
+  world.createCollider(RAPIER.ColliderDesc.cuboid(hx, hy, hz).setDensity(density).setFriction(.8).setRestitution(.2), b);
+  mesh.castShadow = mesh.receiveShadow = true; scene.add(mesh); bodies.push([b, mesh]);
+  return b;
+}
+
+/* ------------------------------------------------------------------
+   Het eiland
+   ------------------------------------------------------------------ */
+const R = 34; // straal
+{
+  // zichtbaar eiland: platte bovenkant + rotsige rand
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(R, R + 1.5, 2, 64, 1), flat(0x14262c));
+  top.position.y = -1; top.receiveShadow = true; scene.add(top);
+  const cliff = new THREE.CylinderGeometry(R + 1.5, R - 6, 10, 48, 4);
+  const p = cliff.attributes.position;
+  for (let i = 0; i < p.count; i++) { const y = p.getY(i); if (y < 4.9) { p.setX(i, p.getX(i) * (1 + (Math.random() - .5) * .06)); p.setZ(i, p.getZ(i) * (1 + (Math.random() - .5) * .06)); } }
+  cliff.computeVertexNormals();
+  const cl = new THREE.Mesh(cliff, flat(0x0d171c)); cl.position.y = -7; scene.add(cl);
+  // gloeiende rand
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(R + .2, .08, 8, 128), new THREE.MeshBasicMaterial({ color: 0x20e0d0 }));
+  ring.rotation.x = Math.PI / 2; ring.position.y = .02; scene.add(ring);
+  // water
+  const water = new THREE.Mesh(new THREE.CircleGeometry(220, 64), new THREE.MeshStandardMaterial({ color: 0x06121a, roughness: .25, metalness: .2 }));
+  water.rotation.x = -Math.PI / 2; water.position.y = -6; scene.add(water);
+  // natuurkunde: vloer (dun blok) — van het eiland af rijden = in het water vallen
+  const g = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -.5, 0));
+  world.createCollider(RAPIER.ColliderDesc.cylinder(.5, R).setFriction(1.2), g);
+  // wegen: kruis van lichte paden naar de plekken
+  const pathMat = flat(0x1d3640);
+  ZONES.forEach(z => {
+    const len = Math.hypot(z.pos[0], z.pos[2]);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(len, 3.2), pathMat);
+    m.rotation.x = -Math.PI / 2; m.rotation.z = -Math.atan2(z.pos[2], z.pos[0]);
+    m.position.set(z.pos[0] / 2, .015, z.pos[2] / 2); m.receiveShadow = true; scene.add(m);
+  });
+}
+
+/* bomen en rotsen (InstancedMesh + vaste colliders) */
+{
+  const trunkGeo = new THREE.CylinderGeometry(.18, .25, 1.2, 6), crownGeo = new THREE.ConeGeometry(1.1, 2.6, 7);
+  const rockGeo = new THREE.DodecahedronGeometry(.9, 0);
+  const N = 46, trunks = new THREE.InstancedMesh(trunkGeo, flat(0x3a2a22), N), crowns = new THREE.InstancedMesh(crownGeo, flat(0x1f6f66), N);
+  const rocks = new THREE.InstancedMesh(rockGeo, flat(0x2b3a40), 24);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), v = new THREE.Vector3();
+  const blocked = ([x, z]) => Math.hypot(x, z) < 9 || ZONES.some(zz => Math.hypot(x - zz.pos[0], z - zz.pos[2]) < 8.5) ||
+    ZONES.some(zz => { // niet op de paden
+      const L = Math.hypot(zz.pos[0], zz.pos[2]), ux = zz.pos[0] / L, uz = zz.pos[2] / L, t = x * ux + z * uz;
+      return t > 0 && t < L && Math.abs(-x * uz + z * ux) < 3.2;
+    }) || Math.abs(x) < 7 && z > 4 && z < 12;
+  let n = 0, tries = 0;
+  while (n < N && tries++ < 3000) {
+    const a = Math.random() * Math.PI * 2, r = 10 + Math.random() * (R - 13), x = Math.cos(a) * r, z = Math.sin(a) * r;
+    if (blocked([x, z])) continue;
+    const sc = .8 + Math.random() * .7;
+    m.compose(v.set(x, .6 * sc, z), q.identity(), s.setScalar(sc)); trunks.setMatrixAt(n, m);
+    m.compose(v.set(x, (1.2 + 1.3) * sc, z), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * 6), s.setScalar(sc)); crowns.setMatrixAt(n, m);
+    crowns.setColorAt(n, new THREE.Color().setHSL(.47 + Math.random() * .06, .55, .22 + Math.random() * .1));
+    const b = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(x, 1, z));
+    world.createCollider(RAPIER.ColliderDesc.cylinder(1, .3 * sc), b);
+    n++;
+  }
+  trunks.count = crowns.count = n;
+  let k = 0; tries = 0;
+  while (k < 24 && tries++ < 3000) {
+    const a = Math.random() * Math.PI * 2, r = 8 + Math.random() * (R - 10), x = Math.cos(a) * r, z = Math.sin(a) * r;
+    if (blocked([x, z])) continue;
+    const sc = .4 + Math.random() * .7;
+    m.compose(v.set(x, .2 * sc, z), q.random(), s.set(sc, sc * .7, sc)); rocks.setMatrixAt(k++, m);
+  }
+  [trunks, crowns, rocks].forEach(o => { o.castShadow = o.receiveShadow = true; scene.add(o); });
+}
+
+/* ------------------------------------------------------------------
+   Canvas-texturen (letters, borden, labels)
+   ------------------------------------------------------------------ */
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+function label(text, color = '#ffffff') {
+  const t = canvasTex(512, 128, (g, w, h) => { g.font = '700 64px "Space Grotesk", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = color; g.fillText(text.toUpperCase(), w / 2, h / 2); });
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false })); s.scale.set(6, 1.5, 1); return s;
+}
+
+/* WEBMOTIONLAB-letters: losse blokken die je omver kunt rijden */
+{
+  const word = 'WEBMOTIONLAB', W = 1.3, gap = .12, start = -((word.length - 1) * (W + gap)) / 2;
+  [...word].forEach((ch, i) => {
+    const turq = i >= 9;
+    const tex = canvasTex(128, 160, (g, w, h) => { g.fillStyle = turq ? '#20e0d0' : '#eef3f6'; g.fillRect(0, 0, w, h); g.fillStyle = turq ? '#080b10' : '#080b10'; g.font = '700 128px "Space Grotesk", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ch, w / 2, h / 2 + 6); });
+    const side = flat(turq ? 0x20e0d0 : 0xdfe7ea);
+    const face = new THREE.MeshStandardMaterial({ map: tex, roughness: .6 });
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(W, 1.6, .5), [side, side, side, side, face, face]);
+    dynamicBox(W / 2, .8, .25, [start + i * (W + gap), .8, 8], mesh, .25);
+  });
+}
+
+/* Schans om te springen */
+{
+  const ang = .26, len = 6, hx = len / 2, hy = .25, hz = 2;
+  const rot = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), ang);
+  const pos = [0, Math.sin(ang) * hx - .1, -9];
+  fixedBox(hx, hy, hz, pos, { x: rot.x, y: rot.y, z: rot.z, w: rot.w });
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, hy * 2, hz * 2), flat(0x20e0d0, { emissive: 0x0a3a36 }));
+  m.position.set(...pos); m.quaternion.copy(rot); m.castShadow = m.receiveShadow = true; scene.add(m);
+  const l = label('Schans', '#75f5e8'); l.position.set(0, 3.2, -9); l.scale.set(4, 1, 1); scene.add(l);
+}
+
+/* ------------------------------------------------------------------
+   De vier plekken: ring op de grond, lichtbundel, label en decor
+   ------------------------------------------------------------------ */
+const zoneObjs = ZONES.map(z => {
+  const [x, , zz] = z.pos, g = new THREE.Group(); g.position.set(x, 0, zz); scene.add(g);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(4.2, 4.6, 64), new THREE.MeshBasicMaterial({ color: z.color, transparent: true, opacity: .9, side: THREE.DoubleSide }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = .03; g.add(ring);
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(4.4, 4.4, 14, 48, 1, true), new THREE.MeshBasicMaterial({ color: z.color, transparent: true, opacity: .06, side: THREE.DoubleSide, depthWrite: false }));
+  beam.position.y = 7; g.add(beam);
+  const l = label(z.label); l.position.y = 6.2; g.add(l);
+  return { ...z, g, ring, beam, l };
+});
+
+/* Diensten: drie zwevende vormen */
+{
+  const g = zoneObjs[0].g, mats = [flat(0x20e0d0, { emissive: 0x0b4a44 }), flat(0xffffff), flat(0x2a7cff, { emissive: 0x0a1f55 })];
+  [[new THREE.IcosahedronGeometry(.9, 0), -2.2], [new THREE.BoxGeometry(1.3, 1.3, 1.3), 0], [new THREE.TorusGeometry(.7, .28, 10, 24), 2.2]].forEach(([geo, ox], i) => {
+    const m = new THREE.Mesh(geo, mats[i]); m.position.set(ox, 2.4, 0); m.castShadow = true; m.userData.spin = .6 + i * .3; g.add(m);
+  });
+}
+/* Werk: drie borden met conceptmockups */
+{
+  const g = zoneObjs[1].g;
+  const designs = [
+    ['Ember & Oak', '#140d0a', '#e8752a', '#f3e6d3'], ['Lumen Living', '#f4f0ea', '#b89b72', '#1e2a2f'], ['Studio Prisma', '#12051f', '#ff4fd8', '#ffffff'],
+  ];
+  designs.forEach(([name, bg, acc, txt], i) => {
+    const tex = canvasTex(512, 320, (c, w, h) => {
+      c.fillStyle = bg; c.fillRect(0, 0, w, h);
+      const gr = c.createRadialGradient(w * .72, h * .6, 10, w * .72, h * .6, h * .55); gr.addColorStop(0, acc); gr.addColorStop(1, bg); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+      c.fillStyle = txt; c.font = '700 42px "Space Grotesk", sans-serif'; c.fillText(name, 28, h * .48);
+      c.font = '500 18px Inter, sans-serif'; c.globalAlpha = .7; c.fillText('CONCEPTONTWERP', 30, h * .48 + 34); c.globalAlpha = 1;
+      c.fillStyle = acc; c.fillRect(30, h - 62, 120, 30);
+    });
+    const board = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2, .12), [flat(0x0f1a20), flat(0x0f1a20), flat(0x0f1a20), flat(0x0f1a20), new THREE.MeshBasicMaterial({ map: tex }), flat(0x0f1a20)]);
+    const a = (i - 1) * .55; board.position.set(Math.sin(a) * 2.6, 2.1, -Math.cos(a) * 1.2 + 1); board.rotation.y = -a;
+    board.castShadow = true; g.add(board);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 1.1), flat(0x334047)); pole.position.set(board.position.x, .55, board.position.z); g.add(pole);
+  });
+}
+/* Prijzen: drie zuilen van €500 / €750 / €1.000 */
+{
+  const g = zoneObjs[2].g;
+  [['€500', 1.4, 0xdfe7ea], ['€750', 2.2, 0x20e0d0], ['€1.000', 3.0, 0x2a7cff]].forEach(([t, hgt, col], i) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(1.2, hgt, 1.2), flat(col, { emissive: i === 1 ? 0x0b4a44 : 0x000000 }));
+    m.position.set((i - 1) * 1.8, hgt / 2, 0); m.castShadow = m.receiveShadow = true; g.add(m);
+    const l = label(t); l.scale.set(2.8, .7, 1); l.position.set((i - 1) * 1.8, hgt + .6, 0); g.add(l);
+    const b = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(g.position.x + (i - 1) * 1.8, hgt / 2, g.position.z));
+    world.createCollider(RAPIER.ColliderDesc.cuboid(.6, hgt / 2, .6), b);
+  });
+}
+/* Contact: gloeiend portaal */
+{
+  const g = zoneObjs[3].g;
+  const portal = new THREE.Mesh(new THREE.TorusGeometry(2, .22, 16, 64), new THREE.MeshBasicMaterial({ color: 0x20e0d0 }));
+  portal.position.y = 2.4; g.add(portal); g.userData.portal = portal;
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(1.8, 48), new THREE.MeshBasicMaterial({ color: 0x75f5e8, transparent: true, opacity: .18, side: THREE.DoubleSide }));
+  disc.position.y = 2.4; g.add(disc);
+}
+
+/* Kegels bij de start om omver te rijden */
+{
+  const coneGeo = new THREE.ConeGeometry(.35, .9, 10);
+  for (let i = 0; i < 6; i++) {
+    const m = new THREE.Mesh(coneGeo, flat(i % 2 ? 0xffffff : 0x20e0d0));
+    const b = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(-5 + (i % 3) * 1.2, .45, 2.5 + Math.floor(i / 3) * 1.2).setLinearDamping(.3).setAngularDamping(.4));
+    world.createCollider(RAPIER.ColliderDesc.cone(.45, .35).setDensity(.2).setFriction(.7), b);
+    m.castShadow = true; scene.add(m); bodies.push([b, m]);
+  }
+}
+
+/* ------------------------------------------------------------------
+   De auto: Rapier raycast-voertuig (zelfde opzet als bruno-simon.com)
+   Vooruit = +x, wielas = z, wielen zoeken de grond langs -y.
+   ------------------------------------------------------------------ */
+const START = { x: 0, y: 1.6, z: 3 };
+const chassisBody = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(START.x, START.y, START.z).setLinearDamping(.15).setAngularDamping(1.2).setCanSleep(false));
+world.createCollider(RAPIER.ColliderDesc.cuboid(1.15, .32, .62).setDensity(1.0).setFriction(.3), chassisBody);
+// zwaar, laag 'ballast'-blok: laag zwaartepunt = geen wheelies of omkiepen
+world.createCollider(RAPIER.ColliderDesc.cuboid(.9, .05, .5).setTranslation(0, -.45, 0).setDensity(14).setSensor(true), chassisBody);
+const vehicle = world.createVehicleController(chassisBody);
+const WHEEL = { radius: .4, rest: .55, frictionSlip: .9, sideFriction: 3, maxForce: 150, maxTravel: 2, compression: 10, relaxation: 2.7, stiffness: 25 };
+const wheelPos = [[.9, -.15, .75], [.9, -.15, -.75], [-.9, -.15, .75], [-.9, -.15, -.75]]; // 0,1 = voorwielen
+wheelPos.forEach(([x, y, z], i) => {
+  vehicle.addWheel({ x, y, z }, { x: 0, y: -1, z: 0 }, { x: 0, y: 0, z: 1 }, WHEEL.rest, WHEEL.radius);
+  vehicle.setWheelFrictionSlip(i, WHEEL.frictionSlip);
+  vehicle.setWheelSideFrictionStiffness(i, WHEEL.sideFriction);
+  vehicle.setWheelMaxSuspensionForce(i, WHEEL.maxForce);
+  vehicle.setWheelMaxSuspensionTravel(i, WHEEL.maxTravel);
+  vehicle.setWheelSuspensionCompression(i, WHEEL.compression);
+  vehicle.setWheelSuspensionRelaxation(i, WHEEL.relaxation);
+  vehicle.setWheelSuspensionStiffness(i, WHEEL.stiffness);
+});
+
+/* Auto-model (low-poly, in huisstijl) */
+const car = new THREE.Group(); scene.add(car);
+{
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.3, .55, 1.24), flat(0x20e0d0, { emissive: 0x062a27 }));
+  body.position.y = .05; const cab = new THREE.Mesh(new THREE.BoxGeometry(1.1, .5, 1.05), flat(0x0d1418, { roughness: .2 }));
+  cab.position.set(-.15, .55, 0); const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.32, .08, .3), flat(0xffffff));
+  stripe.position.set(0, .34, 0);
+  const lightMat = new THREE.MeshBasicMaterial({ color: 0xfff6d8 });
+  const l1 = new THREE.Mesh(new THREE.BoxGeometry(.05, .14, .28), lightMat); l1.position.set(1.16, .1, .38);
+  const l2 = l1.clone(); l2.position.z = -.38;
+  const head = new THREE.SpotLight(0xfff1cc, 25, 22, .55, .6, 1.2); head.position.set(1.1, .3, 0); head.target.position.set(6, -.6, 0);
+  car.add(body, cab, stripe, l1, l2, head, head.target);
+  car.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+}
+const wheels = wheelPos.map(() => {
+  const w = new THREE.Mesh(new THREE.CylinderGeometry(WHEEL.radius, WHEEL.radius, .3, 14), flat(0x0b0f12));
+  w.geometry.rotateX(Math.PI / 2); w.castShadow = true;
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .32, 8), flat(0xdfe7ea)); hub.geometry.rotateX(Math.PI / 2); w.add(hub);
+  scene.add(w); return w;
+});
+
+/* ------------------------------------------------------------------
+   Besturing: toetsenbord + touch-joystick
+   ------------------------------------------------------------------ */
+const input = { fwd: 0, back: 0, left: 0, right: 0, brake: 0, joyX: 0, joyY: 0 };
+const keymap = { KeyW: 'fwd', ArrowUp: 'fwd', KeyZ: 'fwd', KeyS: 'back', ArrowDown: 'back', KeyA: 'left', KeyQ: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', Space: 'brake' };
+addEventListener('keydown', e => { if (keymap[e.code]) { input[keymap[e.code]] = 1; e.preventDefault(); } if (e.code === 'KeyR') resetCar(); });
+addEventListener('keyup', e => { if (keymap[e.code]) input[keymap[e.code]] = 0; });
+{
+  const joy = $('#joy'), knob = joy.querySelector('i'); let id = null;
+  const move = e => { const r = joy.getBoundingClientRect(); let dx = (e.clientX - r.left - r.width / 2) / (r.width / 2), dy = (e.clientY - r.top - r.height / 2) / (r.height / 2); const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; } input.joyX = dx; input.joyY = -dy; knob.style.transform = `translate(${dx * 36}px,${dy * 36}px)`; };
+  joy.addEventListener('pointerdown', e => { id = e.pointerId; joy.setPointerCapture(id); move(e); });
+  joy.addEventListener('pointermove', e => { if (e.pointerId === id) move(e); });
+  const end = () => { id = null; input.joyX = input.joyY = 0; knob.style.transform = ''; };
+  joy.addEventListener('pointerup', end); joy.addEventListener('pointercancel', end);
+}
+$('#reset').addEventListener('click', () => resetCar());
+function resetCar() {
+  chassisBody.setTranslation(START, true); chassisBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+  chassisBody.setLinvel({ x: 0, y: 0, z: 0 }, true); chassisBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+}
+
+/* rijgedrag (waarden zoals bruno-simon.com, aangepast aan onze auto) */
+const DRIVE = { engine: 14, boostTop: 14, top: 11, steer: .7, brake: .35, idleBrake: .06, reverseBrake: .4 };
+const fwd = new THREE.Vector3(), q = new THREE.Quaternion(), tmpV = new THREE.Vector3();
+let speed = 0, steerSmooth = 0;
+function drivePrePhysics(dt) {
+  const t = chassisBody.translation(), r = chassisBody.rotation(), v = chassisBody.linvel();
+  q.set(r.x, r.y, r.z, r.w); fwd.set(1, 0, 0).applyQuaternion(q);
+  const fv = v.x * fwd.x + v.y * fwd.y + v.z * fwd.z; speed = fv;
+  const throttle = clampN(input.fwd - input.back + input.joyY, -1, 1);
+  const steerIn = clampN(input.left - input.right - input.joyX, -1, 1);
+  steerSmooth += (steerIn - steerSmooth) * Math.min(1, dt * 10);
+  const over = Math.max(0, Math.abs(speed) - DRIVE.top);
+  let force = throttle * DRIVE.engine / (1 + over);
+  let brake = input.brake ? DRIVE.brake : Math.abs(throttle) < .1 ? DRIVE.idleBrake : 0;
+  if (Math.abs(speed) > .6 && Math.sign(throttle) && Math.sign(throttle) !== Math.sign(speed)) { brake = DRIVE.reverseBrake; force = 0; }
+  const steer = steerSmooth * DRIVE.steer / (1 + Math.abs(speed) * .02);
+  for (let i = 0; i < 4; i++) { vehicle.setWheelBrake(i, brake); vehicle.setWheelEngineForce(i, force); /* vierwielaandrijving */ }
+  vehicle.setWheelSteering(0, steer); vehicle.setWheelSteering(1, steer);
+  if (t.y < -8) resetCar(); // in het water gevallen
+}
+const clampN = (x, a, b) => Math.min(b, Math.max(a, x));
+
+/* ------------------------------------------------------------------
+   Plekken ontdekken
+   ------------------------------------------------------------------ */
+let activeZone = null;
+function checkZones(p) {
+  let inside = null;
+  for (const z of zoneObjs) if (Math.hypot(p.x - z.pos[0], p.z - z.pos[2]) < 4.6) inside = z;
+  if (inside !== activeZone) {
+    activeZone = inside;
+    const panel = $('#panel');
+    if (inside) {
+      panel.innerHTML = inside.html; panel.classList.add('open');
+      if (!visited.has(inside.key)) { visited.add(inside.key); renderGoals(); }
+    } else panel.classList.remove('open');
+  }
+}
+
+/* ------------------------------------------------------------------
+   Volgcamera met veer, vaste schuine hoek
+   ------------------------------------------------------------------ */
+const camFocus = new THREE.Vector3(START.x, 0, START.z);
+const CAM_OFFSET = new THREE.Vector3(-9, 13, 13);
+function updateCamera(dt, p) {
+  // camera volgt een punt iets vóór de auto, met exponentiële demping (stabiel bij elke framerate)
+  const ahead = tmpV.copy(fwd).setY(0).normalize().multiplyScalar(clampN(speed, -2, 12) * .35);
+  const target = new THREE.Vector3(p.x, 0, p.z).add(ahead);
+  camFocus.lerp(target, 1 - Math.exp(-dt * 4.5));
+  const zoom = 1 + clampN(Math.abs(speed) / 30, 0, .25);
+  camera.position.copy(camFocus).addScaledVector(CAM_OFFSET, zoom * (innerWidth < innerHeight ? 1.25 : 1));
+  camera.lookAt(camFocus.x, 1, camFocus.z);
+  sun.position.set(camFocus.x + 12, 25, camFocus.z + 8); sun.target.position.set(camFocus.x, 0, camFocus.z);
+}
+
+/* ------------------------------------------------------------------
+   Lus: vaste physics-stap met accumulator
+   ------------------------------------------------------------------ */
+function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+
+const STEP = 1 / 60; let acc = 0, last = performance.now(), time = 0, running = false;
+const wq = new THREE.Quaternion(), steerQ = new THREE.Quaternion(), spinQ = new THREE.Quaternion(), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, .1); last = now; time += dt;
+  if (running) {
+    acc += dt;
+    while (acc >= STEP) { drivePrePhysics(STEP); vehicle.updateVehicle(STEP); world.step(); acc -= STEP; }
+  }
+  // synchroniseren
+  const t = chassisBody.translation(), r = chassisBody.rotation();
+  car.position.set(t.x, t.y, t.z); car.quaternion.set(r.x, r.y, r.z, r.w);
+  for (let i = 0; i < 4; i++) {
+    const cp = vehicle.wheelChassisConnectionPointCs(i), sl = vehicle.wheelSuspensionLength(i) ?? WHEEL.rest;
+    tmpV.set(cp.x, cp.y - sl, cp.z).applyQuaternion(car.quaternion).add(car.position);
+    wheels[i].position.copy(tmpV);
+    steerQ.setFromAxisAngle(Y, vehicle.wheelSteering(i) || 0); spinQ.setFromAxisAngle(Z, -(vehicle.wheelRotation(i) || 0));
+    wheels[i].quaternion.copy(car.quaternion).multiply(steerQ).multiply(spinQ);
+  }
+  for (const [b, m] of bodies) { const p = b.translation(), rr = b.rotation(); m.position.set(p.x, p.y, p.z); m.quaternion.set(rr.x, rr.y, rr.z, rr.w); }
+  // decor animeren
+  zoneObjs[0].g.children.forEach(o => { if (o.userData.spin) { o.rotation.y += dt * o.userData.spin; o.rotation.x += dt * o.userData.spin * .5; o.position.y = 2.4 + Math.sin(time * 1.5 + o.userData.spin * 3) * .25; } });
+  zoneObjs[3].g.userData.portal.rotation.y = time * .6;
+  zoneObjs.forEach(z => { const on = z === activeZone; z.beam.material.opacity += ((on ? .16 : .06) - z.beam.material.opacity) * .1; z.ring.material.opacity = visited.has(z.key) ? .9 : .5 + .4 * Math.sin(time * 3); });
+  fwd.set(1, 0, 0).applyQuaternion(car.quaternion);
+  updateCamera(dt, car.position);
+  checkZones(car.position);
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* Klaar met laden */
+$('#loading').textContent = 'KLAAR';
+const startBtn = $('#start'); startBtn.disabled = false;
+startBtn.addEventListener('click', () => { $('#intro').classList.add('hide'); running = true; });
+addEventListener('keydown', e => { if (!running && (e.code === 'Enter' || keymap[e.code])) startBtn.click(); });
+document.addEventListener('visibilitychange', () => { last = performance.now(); });
+window.__dbg = () => { const t = chassisBody.translation(); return { x: +t.x.toFixed(2), y: +t.y.toFixed(2), z: +t.z.toFixed(2), speed: +speed.toFixed(2), zone: activeZone && activeZone.key, yaw: +(Math.atan2(-fwd.z, fwd.x) * 57.3).toFixed(1), visited: [...visited], contact: [0, 1, 2, 3].map(i => vehicle.wheelIsInContact(i)) }; };
+</script>
+</body>
+</html>
