@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #080b10;
+  --color-ink-2: #101720;
+  --color-ink-3: #16202b;
+  --color-turq: #20e0d0;
+  --color-turq-light: #75f5e8;
+  --color-mute: #a5afba;
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --font-display: "Space Grotesk Variable", "Inter Variable", system-ui, sans-serif;
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: 88px; }
+body { background: var(--color-ink); color: #fff; -webkit-font-smoothing: antialiased; }
+::selection { background: var(--color-turq); color: var(--color-ink); }
+
+:focus-visible { outline: 2px solid var(--color-turq); outline-offset: 3px; border-radius: 6px; }
+
+@layer components {
+/* Kleine label boven sectietitels */
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--color-turq);
+  display: inline-flex; align-items: center; gap: 10px;
+}
+.eyebrow::before { content: ""; width: 22px; height: 1px; background: currentColor; }
+
+.text-gradient {
+  background: linear-gradient(100deg, #fff 0%, #fff 40%, var(--color-turq-light) 70%, var(--color-turq) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* Glazen kaart met lichtrand */
+.glass {
+  background: linear-gradient(180deg, rgba(22, 32, 43, .72), rgba(16, 23, 32, .55));
+  border: 1px solid rgba(255, 255, 255, .07);
+  backdrop-filter: blur(14px);
+}
+.glow-border { position: relative; }
+.glow-border::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(140deg, rgba(32, 224, 208, .55), rgba(32, 224, 208, 0) 40%, rgba(117, 245, 232, 0) 70%, rgba(117, 245, 232, .35));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+
+/* Knoppen */
+.btn {
+  display: inline-flex; align-items: center; gap: .6rem; border-radius: 999px; padding: .95rem 1.5rem;
+  font-family: var(--font-display); font-weight: 500; font-size: 15px; transition: transform .25s, box-shadow .25s, background .25s, color .25s;
+}
+.btn-primary { background: var(--color-turq); color: var(--color-ink); box-shadow: 0 0 0 0 rgba(32, 224, 208, .5); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 40px -8px rgba(32, 224, 208, .65); background: var(--color-turq-light); }
+.btn-ghost { border: 1px solid rgba(255, 255, 255, .18); color: #fff; }
+.btn-ghost:hover { border-color: var(--color-turq); color: var(--color-turq-light); transform: translateY(-2px); }
+.btn .arrow { transition: transform .25s; }
+.btn:hover .arrow { transform: translateX(3px); }
+
+/* In-beeld-animatie (Reveal-component) */
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity .9s cubic-bezier(.2, .7, .2, 1), transform .9s cubic-bezier(.2, .7, .2, 1); }
+.reveal.is-in { opacity: 1; transform: none; }
+
+/* Bewegende lichtvlekken in de hero */
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(6%, -4%, 0) scale(1.12); }
+}
+.aurora { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .5; animation: drift 14s ease-in-out infinite; }
+
+/* Raster op de achtergrond */
+.grid-bg {
+  background-image: linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse at 50% 40%, #000 20%, transparent 75%);
+}
+
+/* Scroll-indicator */
+@keyframes wheel { 0% { transform: translateY(0); opacity: 1; } 80% { transform: translateY(10px); opacity: 0; } 100% { opacity: 0; } }
+.scroll-wheel { animation: wheel 1.8s ease-in-out infinite; }
+
+/* Lopende tekstband */
+@keyframes marquee { to { transform: translateX(-50%); } }
+.marquee-track { animation: marquee 38s linear infinite; }
+
+/* FAQ-accordion */
+details summary::-webkit-details-marker { display: none; }
+details[open] .faq-icon { transform: rotate(45deg); }
+details[open] { background: rgba(22, 32, 43, .55); }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .aurora, .marquee-track, .scroll-wheel { animation: none; }
+}
